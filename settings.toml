@@ -1,0 +1,7 @@
+back_color = "111111"
+
+[ship]
+size   = 32.0
+force  = 15e6
+torque = 250e6
+color  = "DDDDDD"
