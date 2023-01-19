@@ -5,16 +5,26 @@ const SETTINGS_FILE: &str = "settings.toml";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ShipSettings {
-    pub size: f32,
-    pub force: f32,
+    pub size:   f32,
+    pub force:  f32,
     pub torque: f32,
+    #[serde(deserialize_with = "deserialize_color")]
+    pub color: Color,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AsteroidSettings {
+    pub size_large:  f32,
+    pub size_medium: f32,
+    pub size_small:  f32,   
     #[serde(deserialize_with = "deserialize_color")]
     pub color: Color,
 }
 
 #[derive(Resource, Debug, Serialize, Deserialize)]
 pub struct Settings {
-    pub ship: ShipSettings,
+    pub ship:     ShipSettings,
+    pub asteroid: AsteroidSettings,
     #[serde(deserialize_with = "deserialize_color")]
     pub back_color: Color,
 }

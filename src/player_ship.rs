@@ -1,5 +1,11 @@
 use crate::prelude::*;
 
+use bevy::{
+    render::mesh::Mesh,
+    render::mesh::Indices,
+    render::render_resource::PrimitiveTopology,
+};
+
 const BULLET_COLOR: Color = Color::WHITE;
 
 // Define ship vertices
@@ -89,6 +95,7 @@ fn spawn_bullet(
         RigidBody::Dynamic,
         Velocity { linvel: velocity, angvel: 0.0},
         Damping { linear_damping: 0.0, angular_damping: 0.0 },
+        Collider::ball(2.0),
     ));
 }
 
@@ -101,5 +108,50 @@ pub fn despawn_bullet(
             // Despawn
             commands.entity(entity).despawn();
         }
+    }
+}
+
+pub fn move_player(
+    keyboard_input: Res<Input<KeyCode>>,
+    time: Res<Time>,
+    settings: Res<Settings>,
+    mut query: Query<(&Transform, &mut ExternalForce), With<PlayerShip>>,
+) {
+    
+    for (transform, mut external_force) in query.iter_mut() {
+        let mut linear   = 0.0;
+        let mut rotation = 0.0;
+
+        if keyboard_input.pressed(KeyCode::W) {
+            linear += 1.0;
+        }
+
+        // TODO: Have power up that enables reverse thrusters
+        // if keyboard_input.pressed(KeyCode::S) {
+        //     linear -= 1.0;
+        // }
+
+        if keyboard_input.pressed(KeyCode::D) {
+            rotation -= 1.0;
+        }
+
+        if keyboard_input.pressed(KeyCode::A) {
+            rotation += 1.0;
+        }
+
+        external_force.force  = settings.ship.force * linear * transform.up().truncate() * time.delta_seconds();
+        external_force.torque = settings.ship.torque * rotation * time.delta_seconds();
+    }
+
+}
+
+pub struct PlayerShipPlugin;
+
+impl Plugin for PlayerShipPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_system(fire_gun)
+            .add_system(despawn_bullet)
+            .add_system(move_player);
     }
 }

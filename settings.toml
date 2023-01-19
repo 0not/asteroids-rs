@@ -3,5 +3,11 @@ back_color = "111111"
 [ship]
 size   = 32.0
 force  = 15e6
-torque = 250e6
+torque = 400e6
+color  = "DDDDDD"
+
+[asteroid]
+size_large  = 50.0
+size_medium = 25.0
+size_small  = 10.0
 color  = "DDDDDD"

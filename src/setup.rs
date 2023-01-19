@@ -33,6 +33,7 @@ pub fn setup_player(
             ..default()
         },
         PlayerShip,
+        Health {value: 1},
         RigidBody::Dynamic,
         Velocity { linvel: Vec2::ZERO, angvel: 0.0},
         Damping { linear_damping: 0.5, angular_damping: 10. },
@@ -64,8 +65,8 @@ pub fn setup_asteroids(
     // let pos: Vec2 = Vec2::new(100.0, 0.0);
     let mut rng = rand::thread_rng();
     
-    for _ in 0..5 {
-        let (collider, mesh) = asteroid::collider_and_mesh(settings.ship.size);
+    for _ in 0..10 {
+        
         let x  = rng.gen::<f32>() * 1000. - 500.;
         let y  = rng.gen::<f32>() * 1000. - 500.;
         let vx = rng.gen::<f32>() * 500. - 250.;
@@ -74,23 +75,7 @@ pub fn setup_asteroids(
         let pos = Vec2::new(x, y);
         let vel = Vec2::new(vx, vy);
 
-        commands.spawn((
-            MaterialMesh2dBundle {
-                mesh: meshes.add(mesh).into(),
-                material: materials.add(ColorMaterial::from(settings.ship.color)),
-                transform: Transform::from_translation(pos.extend(0.0)),
-                ..default()
-            },
-            Asteroid,
-            RigidBody::Dynamic,
-            Velocity { linvel: vel, angvel: 0.0},
-            Damping { linear_damping: 0.0, angular_damping: 0. },
-            ExternalForce {
-                force: Vec2::ZERO,
-                torque: 0.0,
-            },
-            collider,
-            Restitution::coefficient(1.),
-        ));
+        asteroid::spawn_asteroid(&mut commands, &mut meshes, &mut materials, &settings, pos, vel, asteroid::AsteroidSize::LARGE);
     }
 }
+
