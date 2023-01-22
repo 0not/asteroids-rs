@@ -42,6 +42,8 @@ pub fn setup_player(
             torque: 0.0,
         },
         player_ship::collider(settings.ship.size),
+        // Ships are group 1, and can only interact with GROUP_3 (asteroids)
+        CollisionGroups::new(Group::GROUP_1, Group::GROUP_3),
     )).with_children(|parent| {
         parent.spawn((
             Gun { 
