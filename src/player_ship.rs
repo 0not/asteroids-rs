@@ -96,6 +96,8 @@ fn spawn_bullet(
         Velocity { linvel: velocity, angvel: 0.0},
         Damping { linear_damping: 0.0, angular_damping: 0.0 },
         Collider::ball(2.0),
+        // Bullets are group 2, and can only interact with GROUP_3 (asteroids)
+        CollisionGroups::new(Group::GROUP_2, Group::GROUP_3),
     ));
 }
 

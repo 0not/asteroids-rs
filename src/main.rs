@@ -45,13 +45,17 @@ fn main() {
             ..default()
         })
         .init_resource::<Settings>()
+        .add_event::<ReceivedDamageEvent>()
         .add_startup_system(setup_camera)
         .add_startup_system(setup_player)
         .add_startup_system(setup_asteroids)
         .add_plugin(PlayerShipPlugin)
         .add_system(periodic_bc)
         .add_system(tick_lifetime)
-        .add_system_to_stage(CoreStage::PostUpdate, asteroid::asteroid_bullet_collision)
+        .add_system(live_or_die)
+        .add_system(propagate_damage)
+        // .add_system_to_stage(CoreStage::PostUpdate, asteroid::asteroid_bullet_collision)
+        .add_system_to_stage(CoreStage::PostUpdate, collision)
         .run();
 }
 
