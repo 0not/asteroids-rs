@@ -1,6 +1,5 @@
-use bevy::render::extract_resource::ExtractResource;
-
 use crate::prelude::*;
+use crate::player_ship::{PlayerShip};
 
 
 pub fn periodic_bc(

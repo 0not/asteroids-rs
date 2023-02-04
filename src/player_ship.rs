@@ -1,38 +1,114 @@
-use crate::prelude::*;
+// use crate::prelude::*;
 
 use bevy::{
-    render::mesh::Mesh,
-    render::mesh::Indices,
+    prelude::*,
+    render::mesh::{Mesh, Indices},
     render::render_resource::PrimitiveTopology,
+    sprite::{MaterialMesh2dBundle, Material2d},
+    utils::{Instant, Duration},
+};
+
+use bevy_rapier2d::prelude::*;
+use crate::{
+    components::*,
+    settings::*,
 };
 
 const BULLET_COLOR: Color = Color::WHITE;
 
-// Define ship vertices
-pub fn vertices(ship_size: f32) -> Vec<[f32; 3]> {
-    let s = (ship_size.powf(2.) - (ship_size/2.).powf(2.)).sqrt() / 2.;
-
-    vec![[0., ship_size, 0.], [s, -ship_size/2., 0.], [-s, -ship_size/2., 0.]]
+#[derive(Component)]
+pub struct PlayerShip {
+    size: f32,
 }
 
-pub fn collider(ship_size: f32) -> Collider {
-    let verts = vertices(ship_size);
-    let points: Vec<_> = verts
-        .iter()
-        .map(|x| Vec2::new(x[0], x[1]))
-        .collect();
-
-
-    Collider::convex_hull(&points).unwrap_or(Collider::ball(ship_size))
+#[derive(Component)]
+pub struct Gun {
+    pub last_fired: Instant,
+    pub cooldown: Duration
 }
 
-pub fn mesh(ship_size: f32) -> Mesh {
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices(ship_size));
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0., 1., 0.]; 3]);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0., 0.]; 3]);
-    mesh.set_indices(Some(Indices::U32(vec![0, 2, 1])));
-    mesh
+#[derive(Bundle)]
+pub struct PlayerShipBundle<M: Material2d> {
+    pub ship: PlayerShip,
+    pub name: Name,
+    pub health: Health,
+    pub rigid: RigidBody,
+    pub velocity: Velocity,
+    pub damping: Damping,
+    pub ext_force: ExternalForce,
+    pub collider: Collider,
+    pub coll_groups: CollisionGroups,
+
+    #[bundle]
+    pub mat_mesh: MaterialMesh2dBundle<M>,
+}
+
+impl<M: Material2d> PlayerShipBundle<M> {
+    pub fn new(
+        position: &Vec2,
+        size: f32, 
+        health: u32, 
+        material: M,    
+        mut meshes: ResMut<Assets<Mesh>>,
+        mut materials: ResMut<Assets<M>>,
+    ) -> PlayerShipBundle<M> {
+        let ship = PlayerShip::new(size);
+
+        PlayerShipBundle {
+            collider: ship.collider(),
+            name: Name::new("PlayerShip"),
+            health: Health {value: health},
+            rigid: RigidBody::Dynamic,
+            velocity: Velocity { linvel: Vec2::ZERO, angvel: 0.0},
+            damping: Damping { linear_damping: 0.5, angular_damping: 10. },
+            ext_force: ExternalForce { force: Vec2::ZERO, torque: 0.0 },
+            // Ships are GROUP_1, and can only interact with GROUP_3 (asteroids)
+            coll_groups: CollisionGroups::new(Group::GROUP_1, Group::GROUP_3),
+            mat_mesh: MaterialMesh2dBundle {
+                mesh: meshes.add(ship.mesh()).into(),
+                material: materials.add(material),
+                transform: Transform::from_translation(position.extend(0.0)),
+                ..default()
+            },
+            ship: ship,
+        }
+    }
+}
+
+impl PlayerShip {
+    // Define ship vertices
+    fn vertices(&self) -> Vec<[f32; 3]> {
+        let s = (self.size.powf(2.) - (self.size/2.).powf(2.)).sqrt() / 2.;
+
+        vec![[0., self.size, 0.], [s, -self.size/2., 0.], [-s, -self.size/2., 0.]]
+    }
+
+    pub fn collider(&self) -> Collider {
+        let verts = self.vertices();
+        let points: Vec<_> = verts
+            .iter()
+            .map(|x| Vec2::new(x[0], x[1]))
+            .collect();
+
+        Collider::convex_hull(&points).unwrap_or(Collider::ball(self.size))
+    }
+
+    pub fn mesh(&self) -> Mesh {
+        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, self.vertices());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0., 1., 0.]; 3]);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0., 0.]; 3]);
+        mesh.set_indices(Some(Indices::U32(vec![0, 2, 1])));
+        mesh
+    }
+
+    pub fn new(size: f32) -> Self {
+        if size < 0.0 {
+            panic!("Ship size must be greater than 0, but found: {}", size);
+        }
+
+        PlayerShip { size }
+    }
 }
 
 // Fire player gun
