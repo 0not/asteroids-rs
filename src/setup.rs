@@ -26,6 +26,7 @@ pub fn setup_player(
 
     
     commands.spawn((
+        Name::new("PlayerShip"),
         MaterialMesh2dBundle {
             mesh: meshes.add(player_ship::mesh(settings.ship.size)).into(),
             material: materials.add(ColorMaterial::from(settings.ship.color)),
@@ -33,7 +34,7 @@ pub fn setup_player(
             ..default()
         },
         PlayerShip,
-        Health {value: 1},
+        Health {value: 1000},
         RigidBody::Dynamic,
         Velocity { linvel: Vec2::ZERO, angvel: 0.0},
         Damping { linear_damping: 0.5, angular_damping: 10. },
@@ -64,15 +65,14 @@ pub fn setup_asteroids(
     mut materials: ResMut<Assets<ColorMaterial>>,
     settings: Res<Settings>,
 ) {
-    // let pos: Vec2 = Vec2::new(100.0, 0.0);
     let mut rng = rand::thread_rng();
     
     for _ in 0..10 {
         
         let x  = rng.gen::<f32>() * 1000. - 500.;
         let y  = rng.gen::<f32>() * 1000. - 500.;
-        let vx = rng.gen::<f32>() * 500. - 250.;
-        let vy = rng.gen::<f32>() * 500. - 250.;
+        let vx = rng.gen::<f32>() * 300. - 150.;
+        let vy = rng.gen::<f32>() * 300. - 150.;
 
         let pos = Vec2::new(x, y);
         let vel = Vec2::new(vx, vy);

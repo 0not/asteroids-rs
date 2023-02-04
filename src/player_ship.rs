@@ -84,6 +84,7 @@ fn spawn_bullet(
     velocity: Vec2,
 ) {
     commands.spawn((
+        Name::new("Bullet"),
         Bullet,
         LifeTime { timer: Timer::new(Duration::from_millis(1500), TimerMode::Once) },
         MaterialMesh2dBundle {

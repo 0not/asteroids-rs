@@ -8,10 +8,23 @@ use bevy::{
     render::mesh::VertexAttributeValues::Float32x3,
 };
 
+#[derive(Debug, Copy, Clone)]
 pub enum AsteroidSize {
     LARGE,
     MEDIUM,
     SMALL,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct SpawnAsteroidEvent {
+    pub position:  Vec2,
+    pub velocity:  Vec2,
+    pub a_size:    AsteroidSize,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct DespawnAsteroidEvent {
+    pub entity: Entity,
 }
 
 // Define asteroid vertices
@@ -82,26 +95,27 @@ pub fn spawn_asteroid(
     meshes:    &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
     settings:  &Res<Settings>,
-    position: Vec2,
-    velocity: Vec2,
-    size: AsteroidSize,
+    position:  Vec2,
+    velocity:  Vec2,
+    a_size:    AsteroidSize,
 ) {
-    let (size, health) = match size {
+    let (mesh_size, health) = match a_size {
         AsteroidSize::LARGE  => (settings.asteroid.size_large,  3),
         AsteroidSize::MEDIUM => (settings.asteroid.size_medium, 2),
         AsteroidSize::SMALL  => (settings.asteroid.size_small,  1),
     };
 
-    let (collider, mesh) = asteroid::collider_and_mesh(size);
+    let (collider, mesh) = asteroid::collider_and_mesh(mesh_size);
 
     commands.spawn((
+        Name::new("Asteroid"),
         MaterialMesh2dBundle {
             mesh: meshes.add(mesh).into(),
             material: materials.add(ColorMaterial::from(settings.asteroid.color)),
             transform: Transform::from_translation(position.extend(0.0)),
             ..default()
         },
-        Asteroid,
+        Asteroid(a_size),
         Health {value: health},
         RigidBody::Dynamic,
         Velocity { linvel: velocity, angvel: 0.0},
@@ -116,4 +130,61 @@ pub fn spawn_asteroid(
         ActiveEvents::COLLISION_EVENTS,
         Restitution::coefficient(1.),
     ));
+}
+
+
+pub fn despawn_asteroid(
+    mut commands:  Commands,
+    mut meshes:    ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    settings:      Res<Settings>,
+    query: Query<(Entity, &Health, &Transform, &Velocity, &Asteroid)>,
+) {
+    for (entity, health, transform, velocity, asteroid) in query.iter() {
+        if health.value <= 0 {
+            commands.entity(entity).despawn();
+            // TODO: Add to score.
+
+            let size = match asteroid.0 {
+                AsteroidSize::LARGE  => AsteroidSize::MEDIUM,
+                AsteroidSize::MEDIUM => AsteroidSize::SMALL,
+                AsteroidSize::SMALL  => break,
+            };
+
+            
+            let num_ast  = match size {
+                AsteroidSize::LARGE  => panic!("Cannot spawn large asteroid in `despawn_asteroid`."),
+                AsteroidSize::MEDIUM => 2,
+                AsteroidSize::SMALL  => 3,
+            };
+
+            let mut angles: Vec<f32> = Vec::new(); //(0..num_ast).map(|n| n).collect();
+
+            if num_ast == 2 {
+                angles.push(std::f32::consts::FRAC_PI_6);
+                angles.push(-std::f32::consts::FRAC_PI_6);
+            } else {
+                angles.push(std::f32::consts::FRAC_PI_4);
+                angles.push(0.);
+                angles.push(-std::f32::consts::FRAC_PI_4);
+            }
+
+            for n in 0..num_ast {
+
+                let position = transform.translation.truncate();
+                let velocity = Vec2::from_angle(angles[n]).rotate(velocity.linvel);
+
+                // Spawn new asteroids
+                spawn_asteroid(
+                    &mut commands,
+                    &mut meshes,
+                    &mut materials,
+                    &settings,
+                    position,
+                    velocity,
+                    size,
+                )
+            }
+        }
+    }
 }

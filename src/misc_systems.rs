@@ -1,3 +1,5 @@
+use bevy::render::extract_resource::ExtractResource;
+
 use crate::prelude::*;
 
 
@@ -34,6 +36,7 @@ pub fn tick_lifetime(
     }
 }
 
+#[derive(Debug)]
 pub struct ReceivedDamageEvent {
     pub to: Entity,
     pub from: Entity,
@@ -46,8 +49,6 @@ pub fn collision(
     mut dmg_event: EventWriter<ReceivedDamageEvent>,
 ) {
     for collision_event in collision_events.iter() {
-        println!("Received collision event: {:?}", collision_event);
-
         if let CollisionEvent::Started(e1, e2, _) = collision_event {
             if let Ok(_health) = query.get_mut(*e1) {
                 //health.value  -= 1; // TODO: I should really fire an event here...
@@ -68,17 +69,44 @@ pub fn propagate_damage(
 ) {
     for ev in dmg_event.iter() {
         if let Ok(mut damaged_health) = query.get_mut(ev.to) {
-            damaged_health.value -= ev.damage;
+            if damaged_health.value > 0 {
+                damaged_health.value -= ev.damage;
+            }
         }
     }
 }
 
-pub fn live_or_die(
+pub fn shorten_bullet_lifetime(
+    mut dmg_event: EventReader<ReceivedDamageEvent>,
+    mut query: Query<&mut LifeTime, With<Bullet>>,
+) {
+    for ev in dmg_event.iter() {
+        // The Bullet is only ever in the `from` field, since it does not have health.
+        if let Ok(mut lifetime) = query.get_mut(ev.from) {
+            println!("Shorten lifetime.");
+            if lifetime.timer.remaining_secs() > 0.1 {
+                lifetime.timer = Timer::new(Duration::from_millis(100), TimerMode::Once);
+            }
+        }
+    }
+}
+
+pub fn dmg_event_debug(
+    mut dmg_event: EventReader<ReceivedDamageEvent>,
+) {
+    for ev in dmg_event.iter() {
+        eprintln!("Entity {:?} damaged by {:?}!", ev.to, ev.from);
+    }
+}
+
+
+pub fn despawn_player(
     mut commands: Commands,
-    query: Query<(Entity, &Health)>,
+    query: Query<(Entity, &Health), With<PlayerShip>>,
 ) {
     for (entity, health) in query.iter() {
         if health.value <= 0 {
+            // TODO: Do more than despawn. Game over.
             commands.entity(entity).despawn();
         }
     }
