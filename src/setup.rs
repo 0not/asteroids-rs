@@ -36,7 +36,7 @@ pub fn setup_player(
     );
     commands
         .spawn(player_ship_bundle)
-        .with_children(|parent| {
+        .with_children(|parent| {  // TODO: Add children bundle
             parent.spawn((
                 Gun { 
                     last_fired: time.startup() + time.elapsed(), 
@@ -48,38 +48,6 @@ pub fn setup_player(
                 },
             ));
         });
-    // commands.spawn((
-    //     Name::new("PlayerShip"),
-    //     MaterialMesh2dBundle {
-    //         mesh: meshes.add(player_ship::mesh(settings.ship.size)).into(),
-    //         material: materials.add(ColorMaterial::from(settings.ship.color)),
-    //         transform: Transform::from_translation(player_pos.extend(0.0)),
-    //         ..default()
-    //     },
-    //     PlayerShip,
-    //     Health {value: 1000},
-    //     RigidBody::Dynamic,
-    //     Velocity { linvel: Vec2::ZERO, angvel: 0.0},
-    //     Damping { linear_damping: 0.5, angular_damping: 10. },
-    //     ExternalForce {
-    //         force: Vec2::ZERO,
-    //         torque: 0.0,
-    //     },
-    //     player_ship::collider(settings.ship.size),
-    //     // Ships are group 1, and can only interact with GROUP_3 (asteroids)
-    //     CollisionGroups::new(Group::GROUP_1, Group::GROUP_3),
-    // )).with_children(|parent| {
-    //     parent.spawn((
-    //         Gun { 
-    //             last_fired: time.startup() + time.elapsed(), 
-    //             cooldown:   Duration::from_millis(100),
-    //         },
-    //         SpatialBundle {
-    //             transform: Transform::from_translation(Vec2::new(0.0, 1.05*settings.ship.size).extend(0.0)),
-    //             ..default()
-    //         },
-    //     ));
-    // });
 }
 
 pub fn setup_asteroids(
