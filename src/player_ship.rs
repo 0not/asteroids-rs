@@ -1,5 +1,3 @@
-// use crate::prelude::*;
-
 use bevy::{
     prelude::*,
     render::mesh::{Mesh, Indices},
@@ -7,7 +5,6 @@ use bevy::{
     sprite::{MaterialMesh2dBundle, Material2d},
     utils::{Instant, Duration},
 };
-
 use bevy_rapier2d::prelude::*;
 use crate::{
     components::*,
@@ -58,7 +55,7 @@ impl<M: Material2d> PlayerShipBundle<M> {
     pub fn new(
         position: &Vec2,
         size: f32, 
-        health: u32, 
+        health: i32, 
         material: M,    
         mut meshes: ResMut<Assets<Mesh>>,
         mut materials: ResMut<Assets<M>>,

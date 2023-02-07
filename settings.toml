@@ -7,7 +7,10 @@ torque = 400e6
 color  = "DDDDDD"
 
 [asteroid]
-size_large  = 50.0
-size_medium = 25.0
-size_small  = 10.0
-color  = "DDDDDD"
+size_large    = 50.0
+size_medium   = 25.0
+size_small    = 10.0
+health_large  = 3
+health_medium = 2
+health_small  = 1
+color         = "DDDDDD"

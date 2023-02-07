@@ -1,11 +1,14 @@
-use crate::prelude::*;
-use rand::prelude::*;
-
 use bevy::{
-    render::mesh::Mesh,
-    render::mesh::Indices,
+    prelude::*,
+    render::mesh::{Mesh, Indices, VertexAttributeValues::Float32x3},
     render::render_resource::PrimitiveTopology,
-    render::mesh::VertexAttributeValues::Float32x3,
+    sprite::{MaterialMesh2dBundle, Material2d},
+};
+use bevy_rapier2d::prelude::*;
+use rand::prelude::*;
+use crate::{
+    components::*,
+    settings::*,
 };
 
 pub struct AsteroidPlugin;
@@ -20,7 +23,10 @@ impl Plugin for AsteroidPlugin {
 }
 
 #[derive(Component)]
-pub struct Asteroid(pub AsteroidSize);
+pub struct Asteroid {
+    pub a_size: AsteroidSize,
+    pub settings: AsteroidSettings,
+}
 
 #[derive(Debug, Copy, Clone)]
 pub enum AsteroidSize {
@@ -41,67 +47,144 @@ pub struct DespawnAsteroidEvent {
     pub entity: Entity,
 }
 
-// Define asteroid vertices
-pub fn vertices(size: f32) -> Vec<[f32; 3]> {
-    let sides = 24;
-    let max_delta = 0.2 * size;
-    let mut rng = rand::thread_rng();
+#[derive(Bundle)]
+pub struct AsteroidBundle<M: Material2d> {
+    pub asteroid: Asteroid,
+    pub name: Name,
+    pub health: Health,
+    pub rigid: RigidBody,
+    pub velocity: Velocity,
+    pub damping: Damping,
+    pub ext_force: ExternalForce,
+    pub collider: Collider,
+    pub coll_groups: CollisionGroups,
+    pub active_events: ActiveEvents,
+    pub resitution: Restitution,
 
-    let mesh: Mesh = shape::RegularPolygon::new(size, sides).into();
-    let mut positions = match mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
-        Some(Float32x3(pos)) => pos.to_vec(),
-        _ => panic!("Could not get vertex positions."),
-    };
-
-    // Calculate center of mass
-    let mut cm = Vec3::from_array([0., 0., 0.]);
-    for pos in positions.iter() {
-        cm[0] += pos[0] / sides as f32;
-        cm[1] += pos[1] / sides as f32;
-        cm[1] += pos[2] / sides as f32;
-    }
-
-    for pos in positions.iter_mut() {
-        let delta: f32 = rng.gen::<f32>()*max_delta - max_delta/2.;
-        let vert = Vec3::from_array(*pos);
-        let normal = (vert - cm).normalize_or_zero();
-        *pos = (vert - delta*normal).into();
-    }
-
-    positions
-
-    // vec![[0., size, 0.], [s, -size/2., 0.], [-s, -size/2., 0.]]
+    #[bundle]
+    pub mat_mesh: MaterialMesh2dBundle<M>,
 }
 
-pub fn collider(size: f32, verts: &Vec<[f32; 3]>) -> Collider {
-    let points: Vec<_> = verts
-        .iter()
-        .map(|x| Vec2::new(x[0], x[1]))
-        .collect();
+impl<M: Material2d> AsteroidBundle<M> {
+    pub fn new(
+        position:  &Vec2,
+        velocity:  &Vec2,
+        size:      AsteroidSize,
+        settings:  AsteroidSettings,
+        health:    i32, 
+        material:  M,    
+        meshes:    &mut ResMut<Assets<Mesh>>,
+        materials: &mut ResMut<Assets<M>>,
+    ) -> AsteroidBundle<M> {
+        let asteroid = Asteroid::new(size, settings);
+        let (collider, mesh) = asteroid.collider_and_mesh();
 
-    Collider::convex_hull(&points).unwrap_or(Collider::ball(size))
+        AsteroidBundle {
+            collider,
+            name: Name::new("Asteroid"),
+            health: Health {value: health},
+            rigid: RigidBody::Dynamic,
+            velocity: Velocity { linvel: *velocity, angvel: 0.},
+            damping: Damping { linear_damping: 0., angular_damping: 0. },
+            ext_force: ExternalForce { force: Vec2::ZERO, torque: 0. },
+            // Asteroids are group 3, but can only interact with GROUP_1 and GROUP_2 (ship and bullet)
+            coll_groups: CollisionGroups::new(Group::GROUP_3, Group::GROUP_1 | Group::GROUP_2),
+            active_events: ActiveEvents::COLLISION_EVENTS,
+            resitution: Restitution::coefficient(1.),
+            mat_mesh: MaterialMesh2dBundle {
+                mesh: meshes.add(mesh).into(),
+                material: materials.add(material),
+                transform: Transform::from_translation(position.extend(0.0)),
+                ..default()
+            },
+            asteroid,
+        }
+    }
 }
 
-pub fn mesh(verts: Vec<[f32; 3]>) -> Mesh {
-    let sides = verts.len();
+impl Asteroid {
+    // Define asteroid vertices
+    fn vertices(&self) -> Vec<[f32; 3]> {
+        let sides = 24;
+        let size  = self.size();
+        let max_delta = 0.2 * size;
+        let mut rng = rand::thread_rng();
 
-    let mut indices = Vec::with_capacity((sides - 2) * 3);
-    for i in 1..(sides as u32 - 1) {
-        indices.extend_from_slice(&[0, i + 1, i]);
+        let mesh: Mesh = shape::RegularPolygon::new(size, sides).into();
+        let mut positions = match mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
+            Some(Float32x3(pos)) => pos.to_vec(),
+            _ => panic!("Could not get vertex positions."),
+        };
+
+        // Calculate center of mass
+        let mut cm = Vec3::from_array([0., 0., 0.]);
+        for pos in positions.iter() {
+            cm[0] += pos[0] / sides as f32;
+            cm[1] += pos[1] / sides as f32;
+            cm[1] += pos[2] / sides as f32;
+        }
+
+        for pos in positions.iter_mut() {
+            let delta: f32 = rng.gen::<f32>()*max_delta - max_delta/2.;
+            let vert = Vec3::from_array(*pos);
+            let normal = (vert - cm).normalize_or_zero();
+            *pos = (vert - delta*normal).into();
+        }
+
+        positions
     }
 
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, verts);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0., 1., 0.]; sides]);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0., 0.]; sides]);
-    mesh.set_indices(Some(Indices::U32(indices)));
-    mesh
-}
+    pub fn collider(&self, verts: &Vec<[f32; 3]>) -> Collider {
+        let size = self.size();
+        let points: Vec<_> = verts
+            .iter()
+            .map(|x| Vec2::new(x[0], x[1]))
+            .collect();
 
-pub fn collider_and_mesh(size: f32) -> (Collider, Mesh) {
-    let verts = vertices(size);
-    
-    (collider(size, &verts), mesh(verts))
+        Collider::convex_hull(&points).unwrap_or(Collider::ball(size))
+    }
+
+    pub fn mesh(&self, verts: Vec<[f32; 3]>) -> Mesh {
+        let sides = verts.len();
+
+        let mut indices = Vec::with_capacity((sides - 2) * 3);
+        for i in 1..(sides as u32 - 1) {
+            indices.extend_from_slice(&[0, i + 1, i]);
+        }
+
+        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, verts);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0., 1., 0.]; sides]);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0., 0.]; sides]);
+        mesh.set_indices(Some(Indices::U32(indices)));
+        mesh
+    }
+
+    pub fn collider_and_mesh(&self) -> (Collider, Mesh) {
+        let verts = self.vertices();
+        
+        (self.collider(&verts), self.mesh(verts))
+    }
+
+    fn size(&self) -> f32 {
+        match self.a_size {
+            AsteroidSize::LARGE  => self.settings.size_large,
+            AsteroidSize::MEDIUM => self.settings.size_medium,
+            AsteroidSize::SMALL  => self.settings.size_small,
+        }
+    }
+
+    fn health(&self) -> i32 {
+        match self.a_size {
+            AsteroidSize::LARGE  => self.settings.health_large,
+            AsteroidSize::MEDIUM => self.settings.health_medium,
+            AsteroidSize::SMALL  => self.settings.health_small,
+        }
+    }
+
+    pub fn new(a_size: AsteroidSize, settings: AsteroidSettings) -> Self {
+        Asteroid { a_size, settings }
+    }
 }
 
 pub fn spawn_asteroid(
@@ -113,37 +196,21 @@ pub fn spawn_asteroid(
     velocity:  Vec2,
     a_size:    AsteroidSize,
 ) {
-    let (mesh_size, health) = match a_size {
-        AsteroidSize::LARGE  => (settings.asteroid.size_large,  3),
-        AsteroidSize::MEDIUM => (settings.asteroid.size_medium, 2),
-        AsteroidSize::SMALL  => (settings.asteroid.size_small,  1),
-    };
+    let asteroid = Asteroid::new(a_size, settings.asteroid);
 
-    let (collider, mesh) = collider_and_mesh(mesh_size);
+    let a_bundle = AsteroidBundle::new(
+        &position,
+        &velocity,
+        a_size,
+        settings.asteroid,
+        asteroid.health(), 
+        ColorMaterial::from(settings.asteroid.color),    
+        meshes,
+        materials,
+    );
 
-    commands.spawn((
-        Name::new("Asteroid"),
-        MaterialMesh2dBundle {
-            mesh: meshes.add(mesh).into(),
-            material: materials.add(ColorMaterial::from(settings.asteroid.color)),
-            transform: Transform::from_translation(position.extend(0.0)),
-            ..default()
-        },
-        Asteroid(a_size),
-        Health {value: health},
-        RigidBody::Dynamic,
-        Velocity { linvel: velocity, angvel: 0.0},
-        Damping { linear_damping: 0.0, angular_damping: 0. },
-        ExternalForce {
-            force: Vec2::ZERO,
-            torque: 0.0,
-        },
-        collider,
-        // Asteroids are group 3, but can only interact with GROUP_1 and GROUP_2 (ship and bullet)
-        CollisionGroups::new(Group::GROUP_3, Group::GROUP_1 | Group::GROUP_2),
-        ActiveEvents::COLLISION_EVENTS,
-        Restitution::coefficient(1.),
-    ));
+    commands.spawn(a_bundle);
+
 }
 
 pub fn despawn_asteroid(
@@ -151,14 +218,14 @@ pub fn despawn_asteroid(
     mut meshes:    ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     settings:      Res<Settings>,
-    query: Query<(Entity, &Health, &Transform, &Velocity, &Asteroid)>,
+    query:         Query<(Entity, &Health, &Transform, &Velocity, &Asteroid)>,
 ) {
     for (entity, health, transform, velocity, asteroid) in query.iter() {
         if health.value <= 0 {
             commands.entity(entity).despawn();
             // TODO: Add to score.
 
-            let size = match asteroid.0 {
+            let size = match asteroid.a_size {
                 AsteroidSize::LARGE  => AsteroidSize::MEDIUM,
                 AsteroidSize::MEDIUM => AsteroidSize::SMALL,
                 AsteroidSize::SMALL  => break,

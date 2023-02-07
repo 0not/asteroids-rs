@@ -66,10 +66,10 @@ fn setup_player(
 }
 
 fn setup_asteroids(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
+    mut commands:  Commands,
+    mut meshes:    ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    settings: Res<Settings>,
+    settings:      Res<Settings>,
 ) {
     let mut rng = rand::thread_rng();
     
@@ -82,8 +82,16 @@ fn setup_asteroids(
 
         let pos = Vec2::new(x, y);
         let vel = Vec2::new(vx, vy);
-
-        asteroid::spawn_asteroid(&mut commands, &mut meshes, &mut materials, &settings, pos, vel, asteroid::AsteroidSize::LARGE);
+        // TODO: Add angular velocity
+        asteroid::spawn_asteroid(
+            &mut commands, 
+            &mut meshes, 
+            &mut materials, 
+            &settings, 
+            pos, 
+            vel, 
+            asteroid::AsteroidSize::LARGE
+        );
     }
 }
 

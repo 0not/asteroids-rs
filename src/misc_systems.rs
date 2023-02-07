@@ -39,7 +39,7 @@ pub fn tick_lifetime(
 pub struct ReceivedDamageEvent {
     pub to: Entity,
     pub from: Entity,
-    pub damage: u32,
+    pub damage: i32,
 }
 
 pub fn collision(

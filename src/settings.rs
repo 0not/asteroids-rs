@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize, Deserializer};
 
 const SETTINGS_FILE: &str = "settings.toml";
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
 pub struct ShipSettings {
     pub size:   f32,
     pub force:  f32,
@@ -12,16 +12,19 @@ pub struct ShipSettings {
     pub color: Color,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
 pub struct AsteroidSettings {
     pub size_large:  f32,
     pub size_medium: f32,
     pub size_small:  f32,   
+    pub health_large:  i32,
+    pub health_medium: i32,
+    pub health_small:  i32,  
     #[serde(deserialize_with = "deserialize_color")]
     pub color: Color,
 }
 
-#[derive(Resource, Debug, Serialize, Deserialize)]
+#[derive(Resource, Debug, Serialize, Deserialize, Copy, Clone)]
 pub struct Settings {
     pub ship:     ShipSettings,
     pub asteroid: AsteroidSettings,
