@@ -4,7 +4,18 @@ use rand::prelude::*;
 
 use crate::player_ship::{Gun, PlayerShipBundle};
 
-pub fn setup_camera(
+pub struct SetupPlugin;
+
+impl Plugin for SetupPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_startup_system(setup_camera)
+            .add_startup_system(setup_player)
+            .add_startup_system(setup_asteroids);
+    }
+}
+
+fn setup_camera(
     mut commands: Commands,
     settings: Res<Settings>,
 ) {
@@ -17,7 +28,7 @@ pub fn setup_camera(
     });
 }
 
-pub fn setup_player(
+fn setup_player(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<ColorMaterial>>,
@@ -34,6 +45,7 @@ pub fn setup_player(
         meshes,
         materials,
     );
+    
     commands
         .spawn(player_ship_bundle)
         .with_children(|parent| {  // TODO: Add children bundle
@@ -50,7 +62,7 @@ pub fn setup_player(
         });
 }
 
-pub fn setup_asteroids(
+fn setup_asteroids(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
