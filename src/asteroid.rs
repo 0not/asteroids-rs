@@ -8,6 +8,20 @@ use bevy::{
     render::mesh::VertexAttributeValues::Float32x3,
 };
 
+pub struct AsteroidPlugin;
+
+impl Plugin for AsteroidPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_event::<SpawnAsteroidEvent>()
+            .add_event::<DespawnAsteroidEvent>()
+            .add_system(despawn_asteroid);
+    }
+}
+
+#[derive(Component)]
+pub struct Asteroid(pub AsteroidSize);
+
 #[derive(Debug, Copy, Clone)]
 pub enum AsteroidSize {
     LARGE,
@@ -105,7 +119,7 @@ pub fn spawn_asteroid(
         AsteroidSize::SMALL  => (settings.asteroid.size_small,  1),
     };
 
-    let (collider, mesh) = asteroid::collider_and_mesh(mesh_size);
+    let (collider, mesh) = collider_and_mesh(mesh_size);
 
     commands.spawn((
         Name::new("Asteroid"),
@@ -131,7 +145,6 @@ pub fn spawn_asteroid(
         Restitution::coefficient(1.),
     ));
 }
-
 
 pub fn despawn_asteroid(
     mut commands:  Commands,

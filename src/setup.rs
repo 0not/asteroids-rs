@@ -2,7 +2,10 @@
 use crate::prelude::*;
 use rand::prelude::*;
 
-use crate::player_ship::{Gun, PlayerShipBundle};
+use crate::{
+    asteroid,
+    player_ship::{Gun, PlayerShipBundle},
+};
 
 pub struct SetupPlugin;
 

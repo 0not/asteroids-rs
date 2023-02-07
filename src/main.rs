@@ -18,7 +18,7 @@ mod prelude {
     pub use bevy_rapier2d::prelude::*;
 
     pub use crate::{
-        asteroid,
+        asteroid::AsteroidPlugin,
         components::*,
         misc_systems::*,
         settings::*,
@@ -46,13 +46,12 @@ fn main() {
         })
         .init_resource::<Settings>()
         .add_event::<ReceivedDamageEvent>()
-        .add_event::<asteroid::SpawnAsteroidEvent>()
-        .add_event::<asteroid::DespawnAsteroidEvent>()
+        .add_plugin(AsteroidPlugin)
         .add_plugin(SetupPlugin)
         .add_plugin(PlayerShipPlugin)
         .add_system(periodic_bc)
         .add_system(tick_lifetime)
-        .add_system(asteroid::despawn_asteroid)
+        
         .add_system(despawn_player)
         .add_system(propagate_damage)
         .add_system(shorten_bullet_lifetime)

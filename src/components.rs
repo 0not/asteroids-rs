@@ -1,9 +1,6 @@
 use crate::prelude::*;
 
 #[derive(Component)]
-pub struct Asteroid(pub asteroid::AsteroidSize);
-
-#[derive(Component)]
 pub struct Bullet;
 
 #[derive(Component)]
