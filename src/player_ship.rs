@@ -16,6 +16,17 @@ use crate::{
 
 const BULLET_COLOR: Color = Color::WHITE;
 
+pub struct PlayerShipPlugin;
+
+impl Plugin for PlayerShipPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_system(fire_gun)
+            .add_system(despawn_bullet)
+            .add_system(move_player);
+    }
+}
+
 #[derive(Component)]
 pub struct PlayerShip {
     size: f32,
@@ -222,15 +233,4 @@ pub fn move_player(
         external_force.torque = settings.ship.torque * rotation * time.delta_seconds();
     }
 
-}
-
-pub struct PlayerShipPlugin;
-
-impl Plugin for PlayerShipPlugin {
-    fn build(&self, app: &mut App) {
-        app
-            .add_system(fire_gun)
-            .add_system(despawn_bullet)
-            .add_system(move_player);
-    }
 }
